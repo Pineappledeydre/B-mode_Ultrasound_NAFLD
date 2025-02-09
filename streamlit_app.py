@@ -2,15 +2,19 @@ import streamlit as st
 import numpy as np
 import cv2
 import joblib
-from tensorflow.keras.models import load_model
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-from tensorflow.keras.preprocessing.image import smart_resize
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.models import Model
+from skimage.transform import resize
+from PIL import Image
 
 # Load the trained model
-final_model = joblib.load("models/final_model.pkl")
+model_path = "models/final_model.pkl"
+final_model = joblib.load(model_path)
 
 # Load feature extractor if needed
-feature_extractor = load_model("models/mobilenet_feature_extractor.h5")  # If applicable
+image_size = (224, 224)
+base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
+feature_extractor = Model(inputs=base_model.input, outputs=base_model.output)
 
 # Image preprocessing function
 def preprocess_image(uploaded_file, target_size=(224, 224)):
@@ -26,29 +30,27 @@ st.title("NAFLD & Fat Percentage Detection")
 st.write("Upload an ultrasound image to detect fat percentage and NAFLD classification.")
 uploaded_file = st.file_uploader("Choose an ultrasound image...", type=["png", "jpg", "jpeg"])
 
-if uploaded_file is not None:
-    # Display uploaded image
-    st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+from PIL import Image
 
-    # Preprocess the image
-    image = preprocess_image(uploaded_file)
-    
-    # Extract CNN features if the model requires it
-    if "stacking" in final_model.named_steps:
-        features = feature_extractor.predict(np.expand_dims(image, axis=0))  # Get CNN features
-        features = features.flatten().reshape(1, -1)  # Flatten for ML model
-    else:
-        features = image.flatten().reshape(1, -1)  # Direct flatten for ML model
+if uploaded_file:
+    # Save uploaded image temporarily
+    temp_image_path = "temp_report.png"
+    with open(temp_image_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
 
-    # Get predictions
-    fat_percentage = final_model.predict(features)[0]  # Model returns fat % directly
-    nafld_class = "Yes" if fat_percentage >= 5 else "No"
+    # Open image and process it
+    img = Image.open(temp_image_path).convert("RGB")
+    img_resized = np.array(resize(np.array(img), image_size)) / 255.0  # Normalize
+    img_resized = img_resized.reshape(1, *image_size, 3)  # Expand dimensions
 
-    # Display results
-    st.subheader("Results")
-    st.write(f"**Estimated Fat Percentage:** {fat_percentage:.2f}%")
-    st.write(f"**NAFLD Classification:** {nafld_class}")
+    # Extract features using MobileNetV2
+    img_features = feature_extractor.predict(img_resized)
+    img_features = img_features.reshape(1, -1)  # Flatten
 
-    # Additional Info
-    st.info("NAFLD classification is determined based on a fat percentage of 5% or higher.")
+    # Predict using Stacking Model + XGBoost
+    prediction = final_model.predict(img_features)
+
+    # Display the result
+    st.sidebar.markdown(f"### 🏥 **NAFLD Risk Score:** `{prediction[0]:.3f}`")
+
 
