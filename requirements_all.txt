@@ -1,0 +1,11 @@
+numpy
+pandas
+scipy
+gdown
+matplotlib
+seaborn
+plotly
+xgboost
+imblearn
+scikit-learn
+tensorflow
