@@ -8,3 +8,5 @@ tensorflow-addons
 scikit-learn
 xgboost
 joblib
+Pillow
+matplotlib
