@@ -8,8 +8,10 @@ Pillow
 matplotlib
 joblib
 
+
 # Image Processing
 opencv-python-headless  # OpenCV without GUI dependencies
+scikit-image
 
 # Machine Learning & Feature Selection
 scikit-learn
