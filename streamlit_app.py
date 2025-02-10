@@ -63,7 +63,9 @@ if uploaded_file:
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
     # 🔢 **Fat Percentage Prediction (Use Class Probabilities)**
-    fat_percentage = xgb_model.predict(stacking_pred_proba)  # ✅ Pass probabilities instead of labels
+    # 🔢 **Fat Percentage Prediction (Use Class Labels Instead of Probabilities)**
+    fat_percentage = xgb_model.predict(stacking_pred.reshape(1, -1))[0]  # ✅ FIXED
+
 
     # 🎯 **Display Results**
     st.subheader("🩺 Prediction Results")
