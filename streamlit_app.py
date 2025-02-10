@@ -6,6 +6,7 @@ import tensorflow as tf
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.models import Model
 from skimage.transform import resize
+import matplotlib.pyplot as plt
 
 # 🎯 Load trained models
 stacking_model = joblib.load("models/stacking_model.pkl")
@@ -33,6 +34,10 @@ if uploaded_file:
 
     # 🖼 Load & Preprocess Image
     image = cv2.imread(temp_image_path)
+    if image is None:
+        st.error(f"❌ Could not load image: {temp_image_path}")
+        st.stop()
+
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_resized = resize(image_rgb, (224, 224)) / 255.0  # Resize & normalize
 
@@ -59,33 +64,14 @@ if uploaded_file:
         st.stop()
 
     # 🔍 **NAFLD Classification Prediction**
-    stacking_pred_proba = stacking_model.predict(X_selected)
-
-    st.write(f"🔍 **Stacking Model Output Shape:** {stacking_pred_proba.shape}")
-    st.write(f"🔍 **Stacking Model Output:** {stacking_pred_proba}")
-
-    # ✅ Convert to Single Value Prediction
-    if stacking_pred_proba.shape[1] > 1:
-        stacking_pred = np.argmax(stacking_pred_proba, axis=1)  # Convert to label
-    else:
-        stacking_pred = stacking_pred_proba.flatten()
-
-    st.write(f"🔍 **Final Stacking Prediction (Single Value):** {stacking_pred}")
+    stacking_pred = stacking_model.predict(X_selected).reshape(-1, 1)
+    st.write(f"🔍 **Stacking Model Output:** {stacking_pred}")
 
     # 🩺 **NAFLD Diagnosis**
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
-    # ✅ **Check Expected Features for XGBoost**
-    xgb_expected_features = xgb_model.get_booster().num_features()
-    st.write(f"🔍 **XGBoost Expected Features:** {xgb_expected_features}")
-    st.write(f"🔍 **Stacking Prediction Shape Before XGBoost:** {stacking_pred.shape}")
-
-    # 🔢 **Fat Percentage Prediction (Fix Input to XGBoost)**
-    try:
-        fat_percentage = xgb_model.predict(stacking_pred.reshape(-1, 1))[0]  # ✅ Pass single value
-    except ValueError as e:
-        st.error(f"❌ XGBoost Feature Mismatch: {e}")
-        st.stop()
+    # 🔢 **Fat Percentage Prediction**
+    fat_percentage = xgb_model.predict(stacking_pred)[0]
 
     # 🎯 **Display Results**
     st.subheader("🩺 Prediction Results")
@@ -94,6 +80,11 @@ if uploaded_file:
 
     # 🖼 Show Uploaded Image
     st.image(image_rgb, caption="Uploaded Ultrasound", use_column_width=True)
+
+    # 📊 **Optional: Show Image in Matplotlib**
+    st.pyplot(plt.imshow(image_rgb))
+    plt.title("Ultrasound Image")
+    plt.axis("off")
 
 st.markdown("---")
 st.markdown("**ℹ Note:** The app automatically processes and classifies NAFLD from uploaded ultrasound images.")
