@@ -49,7 +49,7 @@ if uploaded_file:
 
     X_selected = X_features[:, important_features]
 
-    # ✅ Debug: Print Shapes Before Prediction
+    # ✅ Ensure Feature Count Matches Training
     expected_features = stacking_model.estimators_[0][1].n_features_in_
     st.write(f"🔍 **X_selected shape:** {X_selected.shape}")
     st.write(f"🔍 **Expected features for Stacking Model:** {expected_features}")
@@ -59,25 +59,25 @@ if uploaded_file:
         st.stop()
 
     # 🔍 **NAFLD Classification Prediction**
-    stacking_pred = stacking_model.predict(X_selected)
-    st.write(f"🔍 **Stacking Model Output Shape:** {stacking_pred.shape}")
-    st.write(f"🔍 **Stacking Model Output:** {stacking_pred}")
+    stacking_pred_proba = stacking_model.predict(X_selected)
+    st.write(f"🔍 **Stacking Model Output Shape:** {stacking_pred_proba.shape}")
+    st.write(f"🔍 **Stacking Model Output:** {stacking_pred_proba}")
 
-    # Convert Probability to Binary Label (if needed)
-    if stacking_pred.shape[1] > 1:
-        stacking_pred = np.argmax(stacking_pred, axis=1).reshape(-1, 1)  # Take highest probability
+    # ✅ Convert to Single Value Prediction (NAFLD Diagnosis)
+    stacking_pred = np.argmax(stacking_pred_proba, axis=1)  # Take highest probability class (0 or 1)
+    st.write(f"🔍 **Final Stacking Prediction (Single Value):** {stacking_pred}")
 
     # 🩺 **NAFLD Diagnosis**
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
-    # ✅ Debug: Check XGBoost Model Expected Features
+    # ✅ **Check Expected Features for XGBoost**
     xgb_expected_features = xgb_model.get_booster().num_features()
     st.write(f"🔍 **XGBoost Expected Features:** {xgb_expected_features}")
     st.write(f"🔍 **Stacking Prediction Shape Before XGBoost:** {stacking_pred.shape}")
 
-    # 🔢 **Fat Percentage Prediction (Pass Class Labels Instead of Probabilities)**
+    # 🔢 **Fat Percentage Prediction (Fix Input to XGBoost)**
     try:
-        fat_percentage = xgb_model.predict(np.array([[stacking_pred[0][0]]]))[0]  # ✅ Fix input shape
+        fat_percentage = xgb_model.predict(np.array(stacking_pred).reshape(-1, 1))[0]  # ✅ Pass single value
     except ValueError as e:
         st.error(f"❌ XGBoost Feature Mismatch: {e}")
         st.stop()
