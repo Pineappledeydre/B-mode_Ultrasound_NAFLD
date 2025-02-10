@@ -49,20 +49,33 @@ if uploaded_file:
 
     X_selected = X_features[:, important_features]
 
-    # ✅ Ensure Feature Count Matches Training
+    # ✅ Debug: Print Shapes Before Prediction
     expected_features = stacking_model.estimators_[0][1].n_features_in_
+    st.write(f"🔍 **X_selected shape:** {X_selected.shape}")
+    st.write(f"🔍 **Expected features for Stacking Model:** {expected_features}")
+
     if X_selected.shape[1] != expected_features:
         st.error(f"❌ Feature shape mismatch! Expected {expected_features}, got {X_selected.shape[1]}")
         st.stop()
 
     # 🔍 **NAFLD Classification Prediction**
     stacking_pred = stacking_model.predict(X_selected).reshape(-1, 1)
+    st.write(f"🔍 **Stacking Model Output Shape:** {stacking_pred.shape}")
 
     # 🩺 **NAFLD Diagnosis**
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
+    # ✅ Debug: Check XGBoost Model Expected Features
+    xgb_expected_features = xgb_model.get_booster().num_features()
+    st.write(f"🔍 **XGBoost Expected Features:** {xgb_expected_features}")
+    st.write(f"🔍 **Stacking Prediction Shape Before XGBoost:** {stacking_pred.shape}")
+
     # 🔢 **Fat Percentage Prediction (Pass Class Labels Instead of Probabilities)**
-    fat_percentage = xgb_model.predict(stacking_pred.reshape(1, -1))[0]  # ✅ FIXED
+    try:
+        fat_percentage = xgb_model.predict(stacking_pred.reshape(1, -1))[0]
+    except ValueError as e:
+        st.error(f"❌ XGBoost Feature Mismatch: {e}")
+        st.stop()
 
     # 🎯 **Display Results**
     st.subheader("🩺 Prediction Results")
