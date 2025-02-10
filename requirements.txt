@@ -1,12 +1,23 @@
+# Streamlit for the Web App
 streamlit
+
+# Core Libraries
 numpy
 pandas
-opencv-python-headless
+Pillow
+matplotlib
+joblib
+
+# Image Processing
+opencv-python-headless  # Lightweight OpenCV (no GUI dependencies)
+scikit-image  # Alternative image processing library (optional)
+
+# Machine Learning Models
 tensorflow==2.15.0
 tensorflow-hub
 tensorflow-addons
 scikit-learn
 xgboost
-joblib
-Pillow
-matplotlib
+
+# Deep Learning Models
+keras  # Needed for TensorFlow models (if not included by TF)
