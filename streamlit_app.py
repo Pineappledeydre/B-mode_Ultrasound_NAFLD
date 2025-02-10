@@ -47,7 +47,7 @@ if uploaded_file:
         important_features = np.zeros_like(lasso.coef_, dtype=bool)
         important_features[top_features] = True
 
-    X_selected = X_features[:, important_features]  # Apply selection
+    X_selected = X_features[:, important_features]
 
     # ✅ Ensure Feature Count Matches Training
     expected_features = stacking_model.estimators_[0][1].n_features_in_
@@ -56,21 +56,18 @@ if uploaded_file:
         st.stop()
 
     # 🔍 **NAFLD Classification Prediction**
-    stacking_pred_proba = stacking_model.predict_proba(X_selected)  # ✅ Get probabilities
-    stacking_pred = np.argmax(stacking_pred_proba, axis=1).reshape(-1, 1)  # Convert to class labels
+    stacking_pred = stacking_model.predict(X_selected).reshape(-1, 1)
 
     # 🩺 **NAFLD Diagnosis**
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
-    # 🔢 **Fat Percentage Prediction (Use Class Probabilities)**
-    # 🔢 **Fat Percentage Prediction (Use Class Labels Instead of Probabilities)**
+    # 🔢 **Fat Percentage Prediction (Pass Class Labels Instead of Probabilities)**
     fat_percentage = xgb_model.predict(stacking_pred.reshape(1, -1))[0]  # ✅ FIXED
-
 
     # 🎯 **Display Results**
     st.subheader("🩺 Prediction Results")
     st.info(f"**NAFLD Diagnosis:** {nafld_label}")
-    st.success(f"**Estimated Fat Percentage:** {fat_percentage[0]:.2f}%")
+    st.success(f"**Estimated Fat Percentage:** {fat_percentage:.2f}%")
 
     # 🖼 Show Uploaded Image
     st.image(image_rgb, caption="Uploaded Ultrasound", use_column_width=True)
