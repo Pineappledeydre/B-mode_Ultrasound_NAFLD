@@ -6,7 +6,6 @@ import tensorflow as tf
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.models import Model
 from skimage.transform import resize
-import matplotlib.pyplot as plt
 
 # 🎯 Load trained models
 stacking_model = joblib.load("models/stacking_model.pkl")
