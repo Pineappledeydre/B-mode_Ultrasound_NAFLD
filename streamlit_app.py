@@ -79,7 +79,7 @@ if uploaded_file:
     st.success(f"**Estimated Fat Percentage:** {fat_percentage:.2f}%")
 
     # 🖼 Show Uploaded Image
-    st.image(image_rgb, caption="Uploaded Ultrasound", use_column_width=True)
+    st.image(image_rgb, caption="Uploaded Ultrasound", use_container_width=True)
 
     # 📊 **Optional: Show Image in Matplotlib**
     st.pyplot(plt.imshow(image_rgb))
