@@ -1,64 +1,75 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import cv2
 import joblib
-import matplotlib.pyplot as plt
+import tensorflow as tf
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.models import Model
 from skimage.transform import resize
+from sklearn.linear_model import Lasso
+from sklearn.ensemble import StackingClassifier, RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.utils import shuffle
+from imblearn.over_sampling import SMOTE
+from sklearn.metrics import classification_report, accuracy_score
+from xgboost import XGBClassifier
+
+# Streamlit App Config
+st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
 
 # Load pre-trained models
 stacking_model = joblib.load("models/stacking_model.pkl")
 xgb_model = joblib.load("models/xgb_model.pkl")
-pca_model = joblib.load("models/pca_model.pkl")
-lasso_selector = joblib.load("models/lasso_selector.pkl")
+lasso = joblib.load("models/lasso_selector.pkl")
 
-# MobileNetV2 as Feature Extractor
+# Load MobileNetV2 for feature extraction
 base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
+for layer in base_model.layers[:-30]:
+    layer.trainable = False
 feature_extractor = Model(inputs=base_model.input, outputs=base_model.output)
 
-st.set_page_config(page_title="Liver Ultrasound Analyzer", layout="wide")
-st.title("🩺 Liver Ultrasound Analyzer")
-uploaded_file = st.file_uploader("Upload a Liver Ultrasound Image", type=["png", "jpg", "jpeg"])
+# Upload Image
+st.sidebar.header("📤 Upload Ultrasound Image")
+uploaded_file = st.sidebar.file_uploader("Upload an Ultrasound Image (PNG, JPG, JPEG)", type=["png", "jpg", "jpeg"])
 
 if uploaded_file:
-    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    # Save temporary image
+    temp_image_path = "temp_ultrasound.png"
+    with open(temp_image_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
 
-    if img.ndim == 2:
-        img = np.stack([img] * 3, axis=-1)  # Grayscale to RGB
-    
-    img_resized = resize(img, (224, 224)) / 255.0
-    img_resized = np.expand_dims(img_resized, axis=0)  # Shape (1, 224, 224, 3)
+    # Read Image
+    image = cv2.imread(temp_image_path)
+    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image_resized = resize(image_rgb, (224, 224)) / 255.0  # Normalize
 
-    # Extract Features using MobileNetV2
-    features = feature_extractor.predict(img_resized)
-    features = features.reshape(features.shape[0], -1)  # Flatten features
+    # Extract Features
+    X_features = feature_extractor.predict(np.expand_dims(image_resized, axis=0))
+    X_features = X_features.reshape(1, -1)  # Flatten features
 
-    # Apply PCA Transformation
-    features_pca = pca_model.transform(features)
+    # Lasso Feature Selection
+    important_features = np.abs(lasso.coef_) > 0.01
+    if np.sum(important_features) < 45:
+        top_features = np.argsort(np.abs(lasso.coef_))[-45:]
+        important_features = np.zeros_like(lasso.coef_, dtype=bool)
+        important_features[top_features] = True
+    X_selected = X_features[:, important_features]
 
-    # Feature Selection using Lasso
-    important_features = lasso_selector.coef_ > 0.01
-    X_selected = features_pca[:, important_features]
-
-    # Stacking Model Prediction (NAFLD Classification)
+    # Predict NAFLD Classification
     stacking_pred = stacking_model.predict(X_selected)
-    label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD)"
+    nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
-    # Fat Percentage Prediction using XGBoost
-    fat_percentage = xgb_model.predict(stacking_pred.reshape(-1, 1))[0]
+    # Predict Fat Percentage
+    fat_percentage = xgb_model.predict(X_selected)[0]
 
-    # Show Results
-    st.image(img, caption="Uploaded Liver Ultrasound", use_column_width=True)
-    st.subheader(f"🩺 Diagnosis: **{label}**")
-    st.subheader(f"📊 Estimated Fat Percentage: **{fat_percentage:.2f}%**")
+    # Display Results
+    st.subheader("🩺 Prediction Results")
+    st.info(f"**NAFLD Diagnosis:** {nafld_label}")
+    st.success(f"**Estimated Fat Percentage:** {fat_percentage:.2f}%")
 
-    # Show Classification Probability
-    st.progress(float(stacking_pred[0]))  # Visualize model confidence
+    # Show Uploaded Image
+    st.image(image_rgb, caption="Uploaded Ultrasound", use_column_width=True)
 
-    # **Show Processed Image**
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.imshow(img, cmap="gray")
-    ax.set_title(f"Liver Fat %: {fat_percentage:.2f}%")
-    st.pyplot(fig)
+st.markdown("---")
+st.markdown("**ℹ Note:** The app automatically processes and classifies NAFLD from uploaded ultrasound images.")
