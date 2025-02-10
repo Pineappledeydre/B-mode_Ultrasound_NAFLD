@@ -57,11 +57,11 @@ if uploaded_file:
     X_selected = X_features[:, important_features]
 
     # Predict NAFLD Classification
-    stacking_pred = stacking_model.predict(X_selected)
+    stacking_pred = stacking_model.predict(X_selected).reshape(-1, 1)
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
     # Predict Fat Percentage
-    fat_percentage = xgb_model.predict(X_selected)[0]
+    fat_percentage = xgb_model.predict(stacking_pred)[0] 
 
     # Display Results
     st.subheader("🩺 Prediction Results")
