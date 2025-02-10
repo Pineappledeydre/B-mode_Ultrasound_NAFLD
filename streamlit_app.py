@@ -67,7 +67,7 @@ if uploaded_file:
     stacking_pred = stacking_model.predict(X_selected).reshape(-1, 1)
     # st.write(f"🔍 **Stacking Model Output:** {stacking_pred}")
 
-    nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
+    nafld_label = "Healthy" if stacking_pred[0] == 0 else "Healthy"
     fat_percentage = xgb_model.predict(stacking_pred)[0]
     st.subheader("🩺 Prediction Results")
     st.info(f"**NAFLD Diagnosis:** {nafld_label}")
