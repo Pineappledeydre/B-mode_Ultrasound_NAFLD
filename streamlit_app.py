@@ -74,11 +74,11 @@ if uploaded_file:
     st.success(f"**Estimated Fat Percentage:** {fat_percentage:.2f}%")
     st.image(image_rgb, caption="Uploaded Ultrasound", use_container_width=True)
 
-    fig, ax = plt.subplots()
-    ax.imshow(image_rgb)
-    ax.set_title("Ultrasound Image")
-    ax.axis("off")  
-    st.pyplot(fig)
-    
+    # fig, ax = plt.subplots()
+    # ax.imshow(image_rgb)
+    # ax.set_title("Ultrasound Image")
+    # ax.axis("off")  
+    # st.pyplot(fig)
+
 st.markdown("---")
 st.markdown("**ℹ Note:** The app automatically processes and classifies NAFLD from uploaded ultrasound images.")
