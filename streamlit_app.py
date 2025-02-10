@@ -59,8 +59,13 @@ if uploaded_file:
         st.stop()
 
     # 🔍 **NAFLD Classification Prediction**
-    stacking_pred = stacking_model.predict(X_selected).reshape(-1, 1)
+    stacking_pred = stacking_model.predict(X_selected)
     st.write(f"🔍 **Stacking Model Output Shape:** {stacking_pred.shape}")
+    st.write(f"🔍 **Stacking Model Output:** {stacking_pred}")
+
+    # Convert Probability to Binary Label (if needed)
+    if stacking_pred.shape[1] > 1:
+        stacking_pred = np.argmax(stacking_pred, axis=1).reshape(-1, 1)  # Take highest probability
 
     # 🩺 **NAFLD Diagnosis**
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
@@ -72,7 +77,7 @@ if uploaded_file:
 
     # 🔢 **Fat Percentage Prediction (Pass Class Labels Instead of Probabilities)**
     try:
-        fat_percentage = xgb_model.predict(stacking_pred.reshape(1, -1))[0]
+        fat_percentage = xgb_model.predict(np.array([[stacking_pred[0][0]]]))[0]  # ✅ Fix input shape
     except ValueError as e:
         st.error(f"❌ XGBoost Feature Mismatch: {e}")
         st.stop()
