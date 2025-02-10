@@ -60,11 +60,16 @@ if uploaded_file:
 
     # 🔍 **NAFLD Classification Prediction**
     stacking_pred_proba = stacking_model.predict(X_selected)
+
     st.write(f"🔍 **Stacking Model Output Shape:** {stacking_pred_proba.shape}")
     st.write(f"🔍 **Stacking Model Output:** {stacking_pred_proba}")
 
-    # ✅ Convert to Single Value Prediction (NAFLD Diagnosis)
-    stacking_pred = np.argmax(stacking_pred_proba, axis=1)  # Take highest probability class (0 or 1)
+    # ✅ Convert to Single Value Prediction
+    if stacking_pred_proba.shape[1] > 1:
+        stacking_pred = np.argmax(stacking_pred_proba, axis=1)  # Convert to label
+    else:
+        stacking_pred = stacking_pred_proba.flatten()
+
     st.write(f"🔍 **Final Stacking Prediction (Single Value):** {stacking_pred}")
 
     # 🩺 **NAFLD Diagnosis**
@@ -77,7 +82,7 @@ if uploaded_file:
 
     # 🔢 **Fat Percentage Prediction (Fix Input to XGBoost)**
     try:
-        fat_percentage = xgb_model.predict(np.array(stacking_pred).reshape(-1, 1))[0]  # ✅ Pass single value
+        fat_percentage = xgb_model.predict(stacking_pred.reshape(-1, 1))[0]  # ✅ Pass single value
     except ValueError as e:
         st.error(f"❌ XGBoost Feature Mismatch: {e}")
         st.stop()
