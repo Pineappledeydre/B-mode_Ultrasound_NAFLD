@@ -9,15 +9,19 @@ matplotlib
 joblib
 
 # Image Processing
-opencv-python-headless  # Lightweight OpenCV (no GUI dependencies)
-scikit-image  # Alternative image processing library (optional)
+opencv-python-headless  # OpenCV without GUI dependencies
 
-# Machine Learning Models
+# Machine Learning & Feature Selection
+scikit-learn
+xgboost
+imblearn  # For SMOTE (imbalanced learning)
+scipy  # Required by scikit-learn & XGBoost
+
+# Deep Learning Models
 tensorflow==2.15.0
 tensorflow-hub
 tensorflow-addons
-scikit-learn
-xgboost
+keras  # Ensure it's included (TensorFlow 2.x sometimes includes it by default)
 
-# Deep Learning Models
-keras  # Needed for TensorFlow models (if not included by TF)
+# Additional Utilities (Optional)
+tqdm  # Progress bars for long processes
