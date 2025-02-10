@@ -10,9 +10,6 @@ from skimage.transform import resize
 from sklearn.linear_model import Lasso
 from sklearn.ensemble import StackingClassifier, RandomForestClassifier
 from sklearn.svm import SVC
-from sklearn.utils import shuffle
-from imblearn.over_sampling import SMOTE
-from sklearn.metrics import classification_report, accuracy_score
 from xgboost import XGBClassifier
 
 # Streamlit App Config
@@ -39,29 +36,44 @@ if uploaded_file:
     with open(temp_image_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-    # Read Image
-    image = cv2.imread(temp_image_path)
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image_resized = resize(image_rgb, (224, 224)) / 255.0  # Normalize
+    with st.spinner("🔄 Processing Image..."):
+        # Read Image
+        image = cv2.imread(temp_image_path)
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image_resized = resize(image_rgb, (224, 224)) / 255.0  # Normalize
 
-    # Extract Features
-    X_features = feature_extractor.predict(np.expand_dims(image_resized, axis=0))
-    X_features = X_features.reshape(1, -1)  # Flatten features
+        # Extract Features
+        X_features = feature_extractor.predict(np.expand_dims(image_resized, axis=0))
+        X_features = X_features.reshape(1, -1)  # Flatten features
 
-    # Lasso Feature Selection
-    important_features = np.abs(lasso.coef_) > 0.01
-    if np.sum(important_features) < 45:
-        top_features = np.argsort(np.abs(lasso.coef_))[-45:]
-        important_features = np.zeros_like(lasso.coef_, dtype=bool)
-        important_features[top_features] = True
-    X_selected = X_features[:, important_features]
+        # Lasso Feature Selection
+        important_features = np.abs(lasso.coef_) > 0.01
+        if np.sum(important_features) < 45:
+            top_features = np.argsort(np.abs(lasso.coef_))[-45:]
+            important_features = np.zeros_like(lasso.coef_, dtype=bool)
+            important_features[top_features] = True
+        X_selected = X_features[:, important_features]
 
-    # Predict NAFLD Classification
-    stacking_pred = stacking_model.predict(X_selected).reshape(-1, 1)
-    nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
+        # Ensure X_selected matches expected feature count
+        expected_features = stacking_model.estimators_[0][1].n_features_in_
+        if X_selected.shape[1] != expected_features:
+            st.error(f"⚠ Feature mismatch! Expected {expected_features}, got {X_selected.shape[1]}")
+            st.stop()
 
-    # Predict Fat Percentage
-    fat_percentage = xgb_model.predict(stacking_pred)[0] 
+        # Predict NAFLD Classification
+        try:
+            stacking_pred = stacking_model.predict(X_selected).reshape(-1, 1)
+            nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
+        except Exception as e:
+            st.error(f"Error during NAFLD classification: {str(e)}")
+            st.stop()
+
+        # Predict Fat Percentage
+        try:
+            fat_percentage = xgb_model.predict(stacking_pred)[0]
+        except Exception as e:
+            st.error(f"Error predicting fat percentage: {str(e)}")
+            st.stop()
 
     # Display Results
     st.subheader("🩺 Prediction Results")
