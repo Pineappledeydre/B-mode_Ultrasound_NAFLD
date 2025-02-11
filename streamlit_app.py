@@ -90,18 +90,15 @@ if uploaded_file:
     st.write("📉 **Predicting Fat Percentage (Lasso First Pass)...**")
     fats_pred = lasso.predict(X_features_pca)[0]  # Use full PCA features
 
-    st.write(f"📉 **Lasso Predicted Fat Percentage:** {fats_pred:.2f}%")
+    st.write(f"📉 **Predicted Fat Percentage:** {fats_pred:.2f}%")
 
-    # **📈 XGBoost Final NAFLD Classification**
-    st.write("📈 **Refining NAFLD Diagnosis with XGBoost...**")
-
-    xgb_input = stacking_pred_proba  # ✅ Only probability output is needed for XGBoost Classifier
-    xgb_final_pred = xgb_model.predict(xgb_input)
-
-    final_label = "Healthy" if xgb_final_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
+    #st.write("📈 **Refining NAFLD Diagnosis with XGBoost...**")
+    # xgb_input = stacking_pred_proba  # ✅ Only probability output is needed for XGBoost Classifier
+    # xgb_final_pred = xgb_model.predict(xgb_input)
+    #final_label = "Healthy" if xgb_final_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
     st.subheader("🩺 Prediction Results")
-    st.info(f"**Final NAFLD Diagnosis (XGBoost):** {final_label}")
+    st.info(f"**Final NAFLD Diagnosis :** {nafld_label}")
     st.success(f"**Estimated Fat Percentage:** {fats_pred:.2f}%")
     st.image(image_rgb, caption="Uploaded Ultrasound", use_container_width=True)
 
