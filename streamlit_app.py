@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide") 
+
 import numpy as np
 import cv2
 import joblib
@@ -24,8 +26,7 @@ for layer in base_model.layers[:-30]:  # Keep last 30 layers trainable
     layer.trainable = False
 feature_extractor = Model(inputs=base_model.input, outputs=base_model.output)
 
-# ✅ Streamlit UI Config
-st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
+# Streamlit UI Config
 st.sidebar.header("📤 Upload Ultrasound Image")
 uploaded_file = st.sidebar.file_uploader("Upload an Ultrasound Image (PNG, JPG, JPEG)", type=["png", "jpg", "jpeg"])
 
