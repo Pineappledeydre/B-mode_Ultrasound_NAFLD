@@ -61,6 +61,7 @@ if uploaded_file:
             X_features = feature_extractor.predict(np.expand_dims(image_resized, axis=0))
             X_features = X_features.reshape(1, -1)  # Flatten
             st.write(f"📊 **Extracted Features Shape:** {X_features.shape}")
+            st.write(f"🔎 **First 10 extracted features:** {X_features.flatten()[:10]}")
         except Exception as e:
             st.error(f"❌ Feature extraction failed: {e}")
 
@@ -75,6 +76,7 @@ if uploaded_file:
             X_selected = X_features[:, important_features]
             st.write(f"📊 **Selected Features Shape (After Lasso):** {X_selected.shape}")
             st.write(f"🔍 **Selected Features Indices:** {np.where(important_features)[0]}")
+            st.write(f"🔎 **First 10 selected features:** {X_selected.flatten()[:10]}")
         except Exception as e:
             st.error(f"❌ Lasso feature selection failed: {e}")
 
