@@ -85,16 +85,13 @@ if uploaded_file:
     #final_label = "Healthy" if xgb_final_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
     st.subheader("🩺 Prediction Results")
-    # st.info(f"**Final NAFLD Diagnosis :** {nafld_label}")
-    # st.success(f"**Estimated Fat Percentage:** {fats_pred:.2f}%")
-    # 🩺 **NAFLD Diagnosis with Dynamic Color**
     if nafld_label == "Healthy":
-        st.markdown(f'<p style="color:green; font-size:24px;"><b>🟢 Final NAFLD Diagnosis: {nafld_label}</b></p>', unsafe_allow_html=True)
+        st.markdown(f'<p style="color:green; font-size:20px;"><b>🟢 Final NAFLD Diagnosis: {nafld_label}</b></p>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<p style="color:red; font-size:24px;"><b>🔴 Final NAFLD Diagnosis: {nafld_label}</b></p>', unsafe_allow_html=True)
+        st.markdown(f'<p style="color:red; font-size:20px;"><b>🔴 Final NAFLD Diagnosis: {nafld_label}</b></p>', unsafe_allow_html=True)
 
     # 📉 **Estimated Fat Percentage (Blue)**
-    st.markdown(f'<p style="color:blue; font-size:20px;"><b>📊 Estimated Fat Percentage: {fats_pred:.2f}%</b></p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="color:blue; font-size:20px;"><b>Estimated Fat Percentage: {fats_pred:.2f}%</b></p>', unsafe_allow_html=True)
 
     st.image(image_rgb, caption="Uploaded Ultrasound", use_container_width=True)
 
