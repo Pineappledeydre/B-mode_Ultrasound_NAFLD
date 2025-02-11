@@ -29,6 +29,11 @@ try:
         layer.trainable = False
     feature_extractor = Model(inputs=base_model.input, outputs=base_model.output)
     st.success("✅ MobileNetV2 initialized!")
+    
+    # 🔍 Test the extractor on a dummy input
+    test_input = np.random.rand(1, 224, 224, 3).astype("float32")
+    test_output = feature_extractor.predict(test_input)
+    st.write(f"⚡ **Test Output Shape from MobileNetV2:** {test_output.shape}")
 except Exception as e:
     st.error(f"❌ Error initializing MobileNetV2: {e}")
 
@@ -51,7 +56,7 @@ if uploaded_file:
         st.error(f"❌ Could not load image: {temp_image_path}")
     else:
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image_resized = resize(image_rgb, (224, 224)) / 255.0  # Resize & normalize
+        image_resized = resize(image_rgb, (224, 224)).astype("float32") / 255.0  # Ensure float32 normalization
 
         st.write(f"📸 **Image Loaded Successfully** - Shape: {image_rgb.shape}")
 
@@ -59,9 +64,17 @@ if uploaded_file:
         st.write("🔍 **Extracting Features...**")
         try:
             X_features = feature_extractor.predict(np.expand_dims(image_resized, axis=0))
-            X_features = X_features.reshape(1, -1)  # Flatten
-            st.write(f"📊 **Extracted Features Shape:** {X_features.shape}")
+            st.write(f"🔎 **Raw MobileNetV2 Output Shape:** {X_features.shape}")
+
+            X_features = X_features.flatten().reshape(1, -1)  # Flatten
+            st.write(f"📊 **Extracted Features Shape (After Flattening):** {X_features.shape}")
             st.write(f"🔎 **First 10 extracted features:** {X_features.flatten()[:10]}")
+
+            # 🔥 Check for all zeros or NaN values
+            if np.all(X_features == 0):
+                st.error("🚨 **All extracted features are zero! MobileNetV2 is not working correctly.**")
+            if np.isnan(X_features).any():
+                st.error("🚨 **Extracted features contain NaN values!**")
         except Exception as e:
             st.error(f"❌ Feature extraction failed: {e}")
 
@@ -75,20 +88,9 @@ if uploaded_file:
                 important_features[top_features] = True
             X_selected = X_features[:, important_features]
             st.write(f"📊 **Selected Features Shape (After Lasso):** {X_selected.shape}")
-            st.write(f"🔍 **Selected Features Indices:** {np.where(important_features)[0]}")
             st.write(f"🔎 **First 10 selected features:** {X_selected.flatten()[:10]}")
         except Exception as e:
             st.error(f"❌ Lasso feature selection failed: {e}")
-
-        # Ensure Feature Count Matches Training
-        try:
-            expected_features = stacking_model.estimators_[0][1].n_features_in_
-            if X_selected.shape[1] != expected_features:
-                st.warning(f"⚠ Feature shape mismatch! Expected {expected_features}, got {X_selected.shape[1]}")
-            else:
-                st.success("✅ Feature selection successful! Proceeding to classification...")
-        except Exception as e:
-            st.error(f"❌ Error verifying feature count: {e}")
 
         # **NAFLD Classification Prediction**
         st.write("🧠 **Predicting NAFLD Diagnosis...**")
@@ -126,4 +128,4 @@ if uploaded_file:
         st.image(image_rgb, caption="Uploaded Ultrasound", use_container_width=True)
 
 st.markdown("---")
-st.markdown("**ℹ Note:** The app automatically processes and classifies NAFLD from uploaded ultrasound images.")
+st.markdown("**ℹ Note:** The app automatically processes and clas
