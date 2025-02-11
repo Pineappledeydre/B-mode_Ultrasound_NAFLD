@@ -23,7 +23,6 @@ for layer in base_model.layers[:-30]:
 feature_extractor = Model(inputs=base_model.input, outputs=base_model.output)
 
 # ✅ Streamlit UI
-st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
 st.sidebar.header("📤 Upload Ultrasound Image")
 uploaded_file = st.sidebar.file_uploader("Upload an Ultrasound Image (PNG, JPG, JPEG)", type=["png", "jpg", "jpeg"])
 
