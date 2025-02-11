@@ -128,4 +128,4 @@ if uploaded_file:
         st.image(image_rgb, caption="Uploaded Ultrasound", use_container_width=True)
 
 st.markdown("---")
-st.markdown("**ℹ Note:** The app automatically processes and clas
+st.markdown("**ℹ Note:** The app automatically processes and classifies NAFLD from uploaded ultrasound images.")
