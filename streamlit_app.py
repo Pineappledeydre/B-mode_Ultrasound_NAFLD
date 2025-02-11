@@ -1,8 +1,4 @@
 import streamlit as st
-
-# Streamlit App Config (MUST BE FIRST!)
-st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
-
 import numpy as np
 import cv2
 import joblib
@@ -11,6 +7,9 @@ from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.models import Model
 from skimage.transform import resize
 import matplotlib.pyplot as plt
+
+# Streamlit App Config
+st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
 
 # Load trained models with debugging
 st.write("🔄 **Loading Models...**")
@@ -75,6 +74,7 @@ if uploaded_file:
                 important_features[top_features] = True
             X_selected = X_features[:, important_features]
             st.write(f"📊 **Selected Features Shape (After Lasso):** {X_selected.shape}")
+            st.write(f"🔍 **Selected Features Indices:** {np.where(important_features)[0]}")
         except Exception as e:
             st.error(f"❌ Lasso feature selection failed: {e}")
 
@@ -91,8 +91,11 @@ if uploaded_file:
         # **NAFLD Classification Prediction**
         st.write("🧠 **Predicting NAFLD Diagnosis...**")
         try:
-            stacking_pred = stacking_model.predict(X_selected).reshape(-1, 1)
+            stacking_pred_raw = stacking_model.predict_proba(X_selected)  # Get probabilities
+            stacking_pred = stacking_pred_raw.argmax(axis=1).reshape(-1, 1)  # Convert to class label
+            st.write(f"🔍 **Stacking Model Raw Prediction Probabilities:** {stacking_pred_raw}")
             st.write(f"🔍 **Stacking Model Prediction Output:** {stacking_pred}")
+
             nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
         except Exception as e:
             st.error(f"❌ NAFLD classification failed: {e}")
@@ -101,7 +104,9 @@ if uploaded_file:
         # **Fat Percentage Prediction**
         st.write("📈 **Predicting Fat Percentage...**")
         try:
+            fat_percentage_raw = xgb_model.predict_proba(stacking_pred)  # Get probabilities
             fat_percentage = xgb_model.predict(stacking_pred)[0]
+            st.write(f"📉 **XGBoost Raw Prediction Probabilities:** {fat_percentage_raw}")
             st.write(f"📉 **Predicted Fat Percentage (XGBoost):** {fat_percentage:.2f}%")
         except Exception as e:
             st.error(f"❌ Fat percentage prediction failed: {e}")
