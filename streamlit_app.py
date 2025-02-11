@@ -6,9 +6,8 @@ import tensorflow as tf
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.models import Model
 from skimage.transform import resize
-import xgboost as xgb
 
-# ✅ **Set Streamlit Config First (Before Anything Else!)**
+# ✅ **Set Streamlit Config First**
 st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
 
 # ✅ **Load Models**
@@ -19,8 +18,7 @@ try:
     pca = joblib.load("models/pca_model.pkl")
 
     # ✅ **Fix XGBoost Loading Issue**
-    xgb_model = xgb.XGBRegressor()
-    xgb_model.load_model("models/xgb_model.json")  # **Use JSON format for XGBoost!**
+    xgb_model = joblib.load("models/xgb_model.pkl")  # ✅ Use classifier, not regressor
 
     st.success("✅ Models Loaded Successfully!")
 
@@ -32,7 +30,7 @@ except Exception as e:
 base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
 for layer in base_model.layers[:-30]:  
     layer.trainable = False
-feature_extractor = Model(inputs=base_model.input, outputs=base_model.output)
+feature_extractor = Model(inputs=base_model.input, outputs=base_model.get_layer("block_6_expand_relu").output)
 
 # ✅ **Streamlit UI**
 st.sidebar.header("📤 Upload Ultrasound Image")
@@ -52,7 +50,7 @@ if uploaded_file:
         st.stop()
 
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image_resized = resize(image_rgb, (224, 224)) / 255.0  # Normalize
+    image_resized = (resize(image_rgb, (224, 224)) - 0.5) * 2  # Normalize
 
     st.write(f"✅ **Image Resized Shape:** {image_resized.shape}")
 
@@ -94,19 +92,17 @@ if uploaded_file:
 
     st.write(f"📉 **Lasso Predicted Fat Percentage:** {fats_pred:.2f}%")
 
-    # **📈 XGBoost Final Fat Prediction**
-    st.write("📈 **Refining Fat Percentage Prediction (XGBoost Final Prediction)...**")
+    # **📈 XGBoost Final NAFLD Classification**
+    st.write("📈 **Refining NAFLD Diagnosis with XGBoost...**")
 
-    if xgb_model.n_features_in_ == 1:
-        xgb_input = stacking_pred_proba  # Use only stacking prediction
-    else:
-        xgb_input = np.hstack([stacking_pred_proba, np.array(fats_pred).reshape(-1, 1)])
+    xgb_input = stacking_pred_proba  # ✅ Only probability output is needed for XGBoost Classifier
+    xgb_final_pred = xgb_model.predict(xgb_input)
 
-    fat_percentage_final = xgb_model.predict(xgb_input)[0]
+    final_label = "Healthy" if xgb_final_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
     st.subheader("🩺 Prediction Results")
-    st.info(f"**NAFLD Diagnosis:** {nafld_label}")
-    st.success(f"**Final Estimated Fat Percentage:** {fat_percentage_final:.2f}%")
+    st.info(f"**Final NAFLD Diagnosis (XGBoost):** {final_label}")
+    st.success(f"**Estimated Fat Percentage:** {fats_pred:.2f}%")
     st.image(image_rgb, caption="Uploaded Ultrasound", use_container_width=True)
 
 st.markdown("---")
