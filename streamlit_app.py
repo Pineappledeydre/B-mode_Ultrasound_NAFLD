@@ -1,4 +1,8 @@
 import streamlit as st
+
+# Streamlit App Config (MUST BE FIRST!)
+st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
+
 import numpy as np
 import cv2
 import joblib
@@ -28,9 +32,6 @@ try:
     st.success("✅ MobileNetV2 initialized!")
 except Exception as e:
     st.error(f"❌ Error initializing MobileNetV2: {e}")
-
-# Streamlit App Config
-st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
 
 # Upload Image
 st.sidebar.header("📤 Upload Ultrasound Image")
