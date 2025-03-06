@@ -9,17 +9,17 @@ from skimage.transform import resize
 
 st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
 
-# ✅ Load Models
+# Load Models
 try:
     stacking_model = joblib.load("models/stacking_model.pkl")  
     pca = joblib.load("models/pca_model.pkl")
-    lasso = joblib.load("models/lasso_selector.pkl")  # ✅ Use Lasso for fat prediction
+    lasso = joblib.load("models/lasso_selector.pkl")  # Lasso for fat prediction
 
 except Exception as e:
     st.error(f"Error loading models: {e}")
     st.stop()
 
-# ✅ MobileNetV2 Feature Extractor (Matches Training)
+# MobileNetV2 Feature Extractor 
 base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
 for layer in base_model.layers[:-30]:  
     layer.trainable = False
@@ -39,39 +39,39 @@ if uploaded_file:
         st.error("Could not load image!")
         st.stop()
 
-    # ✅ Ensure Correct Image Preprocessing (Matches Training)
+    # Image Preprocessing (Matches Training)
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image_resized = cv2.resize(image_rgb, (224, 224)) / 127.5 - 1  # MobileNetV2 expects [-1,1] range
 
-    # ✅ Extract Features
+    # Extract Features
     X_features = feature_extractor.predict(np.expand_dims(image_resized, axis=0))
     X_features = X_features.reshape(1, -1)  # Flatten
 
-    st.write(f"✅ Extracted Features Shape: {X_features.shape}")  # Debugging
+    #st.write(f"Extracted Features Shape: {X_features.shape}")  # Debugging
 
-    # ✅ PCA Transformation (Ensure Correct Processing Order)
+    # PCA Transformation 
     X_features_pca = pca.transform(X_features)
-    st.write(f"✅ PCA Transformed Features Shape: {X_features_pca.shape}")  # Debugging
+    #st.write(f"PCA Transformed Features Shape: {X_features_pca.shape}")  # Debugging
 
-    # ✅ Ensure Feature Shape Matches Stacking Model
+    # Ensure Feature Shape Matches Stacking Model
     expected_features = stacking_model.estimators_[0][1].n_features_in_
     if X_features_pca.shape[1] != expected_features:
         st.error(f"Feature shape mismatch! Expected {expected_features}, got {X_features_pca.shape[1]}")
         st.stop()
 
-    # ✅ Predict NAFLD Classification (Stacking Model)
+    # Predict NAFLD Classification (Stacking Model)
     stacking_pred_proba = stacking_model.predict_proba(X_features_pca)
     stacking_pred = stacking_pred_proba.argmax(axis=1).reshape(-1, 1)
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
-    st.write(f"✅ Stacking Model Prediction: {stacking_pred}")  # Debugging
-    st.write(f"✅ Stacking Model Probabilities: {stacking_pred_proba}")  # Debugging
+    st.write(f"Stacking Model Prediction: {stacking_pred}")  # Debugging
+    st.write(f"Stacking Model Probabilities: {stacking_pred_proba}")  # Debugging
 
-    # ✅ Use Lasso Regression to Predict Fat Percentage (Fixes Always 0 Issue)
+    # Lasso Regression to Predict Fat Percentage
     fats_pred = lasso.predict(X_features_pca)[0]  
-    st.write(f"✅ Lasso Predicted Fat Percentage: {fats_pred:.2f}%")  # Debugging
+    #st.write(f"Lasso Predicted Fat Percentage: {fats_pred:.2f}%")  # Debugging
 
-    # ✅ Display Results
+    # Display Results
     st.subheader("🩺 Prediction Results")
     if nafld_label == "Healthy":
         st.markdown(f'<p style="color:green; font-size:20px;"><b>🟢 Final NAFLD Diagnosis: {nafld_label}</b></p>', unsafe_allow_html=True)
