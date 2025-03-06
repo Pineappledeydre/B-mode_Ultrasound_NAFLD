@@ -12,7 +12,6 @@ st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
 # ✅ Load Models
 try:
     stacking_model = joblib.load("models/stacking_model.pkl")  
-    lasso = joblib.load("models/lasso_selector.pkl")
     pca = joblib.load("models/pca_model.pkl")
     xgb_model = joblib.load("models/xgb_model.pkl")  
 
@@ -51,30 +50,19 @@ if uploaded_file:
     # ✅ PCA Transformation (Ensure Correct Processing Order)
     X_features_pca = pca.transform(X_features)
 
-    # ✅ Select Only the Important Features from Lasso
-    important_features = np.abs(lasso.coef_) > 0.01  
-
-    if np.sum(important_features) < 45:
-        top_features = np.argsort(np.abs(lasso.coef_))[-45:]  
-        important_features = np.zeros_like(lasso.coef_, dtype=bool)
-        important_features[top_features] = True  
-
-    X_selected = X_features_pca[:, important_features]  
-
     # ✅ Ensure Feature Shape Matches Stacking Model
     expected_features = stacking_model.estimators_[0][1].n_features_in_
-    if X_selected.shape[1] != expected_features:
-        st.error(f"Feature shape mismatch! Expected {expected_features}, got {X_selected.shape[1]}")
+    if X_features_pca.shape[1] != expected_features:
+        st.error(f"Feature shape mismatch! Expected {expected_features}, got {X_features_pca.shape[1]}")
         st.stop()
 
     # ✅ Predict NAFLD Classification (Stacking Model)
-    stacking_pred_proba = stacking_model.predict_proba(X_selected)
+    stacking_pred_proba = stacking_model.predict_proba(X_features_pca)
     stacking_pred = stacking_pred_proba.argmax(axis=1).reshape(-1, 1)
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
-    # ✅ Predict Fat Percentage (XGBoost Instead of Lasso)
-    xgb_input = stacking_pred_proba  
-    fats_pred = xgb_model.predict(xgb_input)[0]  
+    # ✅ Predict Fat Percentage (Using XGBoost Instead of Lasso)
+    fats_pred = xgb_model.predict(stacking_pred_proba)[0]  
 
     # ✅ Display Results
     st.subheader("🩺 Prediction Results")
