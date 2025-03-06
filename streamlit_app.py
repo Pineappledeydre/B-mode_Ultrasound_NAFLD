@@ -9,20 +9,18 @@ from skimage.transform import resize
 
 st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
 
-# st.write("**Loading Models...**")
+# ✅ Load Models
 try:
     stacking_model = joblib.load("models/stacking_model.pkl")  
     lasso = joblib.load("models/lasso_selector.pkl")
     pca = joblib.load("models/pca_model.pkl")
     xgb_model = joblib.load("models/xgb_model.pkl")  
 
-    #st.success("Models Loaded Successfully!")
-
 except Exception as e:
     st.error(f"Error loading models: {e}")
     st.stop()
 
-# MobileNetV2 Feature Extractor
+# ✅ MobileNetV2 Feature Extractor (Matches Training)
 base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
 for layer in base_model.layers[:-30]:  
     layer.trainable = False
@@ -42,55 +40,49 @@ if uploaded_file:
         st.error("Could not load image!")
         st.stop()
 
+    # ✅ Ensure Correct Image Preprocessing (Matches Training)
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image_resized = (resize(image_rgb, (224, 224)) - 0.5) * 2  # Normalize
+    image_resized = cv2.resize(image_rgb, (224, 224)) / 127.5 - 1  # MobileNetV2 expects [-1,1] range
 
-    #st.write(f"**Image Resized Shape:** {image_resized.shape}")
-
-    # Extract Features
+    # ✅ Extract Features
     X_features = feature_extractor.predict(np.expand_dims(image_resized, axis=0))
     X_features = X_features.reshape(1, -1)  # Flatten
 
-    #st.write(f"**Extracted Features Shape:** {X_features.shape}")
+    # ✅ PCA Transformation (Ensure Correct Processing Order)
+    X_features_pca = pca.transform(X_features)
 
-    # PCA before Lasso
-    X_features_pca = pca.transform(X_features)      
-    important_features = np.abs(lasso.coef_) > 0.01  # Select relevant features
+    # ✅ Select Only the Important Features from Lasso
+    important_features = np.abs(lasso.coef_) > 0.01  
+
     if np.sum(important_features) < 45:
-        top_features = np.argsort(np.abs(lasso.coef_))[-45:]  # Ensure 45 features
+        top_features = np.argsort(np.abs(lasso.coef_))[-45:]  
         important_features = np.zeros_like(lasso.coef_, dtype=bool)
-        important_features[top_features] = True
+        important_features[top_features] = True  
 
     X_selected = X_features_pca[:, important_features]  
 
-    #st.write(f"**X_selected Shape Before Prediction:** {X_selected.shape}")
-
+    # ✅ Ensure Feature Shape Matches Stacking Model
     expected_features = stacking_model.estimators_[0][1].n_features_in_
     if X_selected.shape[1] != expected_features:
         st.error(f"Feature shape mismatch! Expected {expected_features}, got {X_selected.shape[1]}")
         st.stop()
 
+    # ✅ Predict NAFLD Classification (Stacking Model)
     stacking_pred_proba = stacking_model.predict_proba(X_selected)
     stacking_pred = stacking_pred_proba.argmax(axis=1).reshape(-1, 1)
-
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
-    #st.write("📉 **Predicting Fat Percentage (Lasso First Pass)...**")
-    fats_pred = lasso.predict(X_features_pca)[0]  # Use full PCA features
-    #st.write(f"📉 **Predicted Fat Percentage:** {fats_pred:.2f}%")
+    # ✅ Predict Fat Percentage (XGBoost Instead of Lasso)
+    xgb_input = stacking_pred_proba  
+    fats_pred = xgb_model.predict(xgb_input)[0]  
 
-    #st.write("**Refining NAFLD Diagnosis with XGBoost...**")
-    # xgb_input = stacking_pred_proba  
-    # xgb_final_pred = xgb_model.predict(xgb_input)
-    #final_label = "Healthy" if xgb_final_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
-
+    # ✅ Display Results
     st.subheader("🩺 Prediction Results")
     if nafld_label == "Healthy":
         st.markdown(f'<p style="color:green; font-size:20px;"><b>🟢 Final NAFLD Diagnosis: {nafld_label}</b></p>', unsafe_allow_html=True)
     else:
         st.markdown(f'<p style="color:red; font-size:20px;"><b>🔴 Final NAFLD Diagnosis: {nafld_label}</b></p>', unsafe_allow_html=True)
 
-    # 📉 **Estimated Fat Percentage (Blue)**
     st.markdown(f'<p style="color:blue; font-size:20px;"><b>Estimated Fat Percentage: {fats_pred:.2f}%</b></p>', unsafe_allow_html=True)
 
     st.image(image_rgb, caption="Uploaded Ultrasound", use_container_width=True)
