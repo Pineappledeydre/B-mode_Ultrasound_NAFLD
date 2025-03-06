@@ -61,8 +61,8 @@ if uploaded_file:
     stacking_pred = stacking_pred_proba.argmax(axis=1).reshape(-1, 1)
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
-    # ✅ Predict Fat Percentage (Using XGBoost with Correct Feature Shape)
-    fats_pred = xgb_model.predict(stacking_pred_proba[:, 1].reshape(-1, 1))[0]  
+    # ✅ Predict Fat Percentage Using XGBoost with Correct Features
+    fats_pred = xgb_model.predict(X_features_pca)[0]  # Use PCA-transformed features
 
     # ✅ Display Results
     st.subheader("🩺 Prediction Results")
