@@ -67,17 +67,16 @@ if uploaded_file:
     st.write(f"✅ Stacking Model Prediction: {stacking_pred}")  # Debugging
     st.write(f"✅ Stacking Model Probabilities: {stacking_pred_proba}")  # Debugging
 
-    # ✅ Ensure Correct Input Shape for XGBoost
+    # ✅ Fix XGBoost Input - Use Only the NAFLD Probability
+    xgb_input = stacking_pred_proba[:, 1].reshape(-1, 1)  # Extract only class probability for NAFLD
     st.write(f"✅ XGBoost Expected Input Features: {xgb_model.n_features_in_}")  # Debugging
+    st.write(f"✅ XGBoost Input Shape: {xgb_input.shape}")  # Debugging
 
-    if X_features_pca.shape[1] != xgb_model.n_features_in_:
-        st.error(f"❌ Feature shape mismatch for XGBoost! Expected {xgb_model.n_features_in_}, got {X_features_pca.shape[1]}")
+    if xgb_input.shape[1] != xgb_model.n_features_in_:
+        st.error(f"❌ Feature shape mismatch for XGBoost! Expected {xgb_model.n_features_in_}, got {xgb_input.shape[1]}")
         st.stop()
 
     # ✅ Predict Fat Percentage Using XGBoost with Correct Features
-    xgb_input = X_features_pca  # Use PCA-transformed features
-    st.write(f"✅ XGBoost Input Shape: {xgb_input.shape}")  # Debugging
-
     fats_pred = xgb_model.predict(xgb_input)[0]  
 
     st.write(f"✅ XGBoost Prediction Raw Output: {fats_pred}")  # Debugging
