@@ -47,8 +47,11 @@ if uploaded_file:
     X_features = feature_extractor.predict(np.expand_dims(image_resized, axis=0))
     X_features = X_features.reshape(1, -1)  # Flatten
 
+    st.write(f"✅ Extracted Features Shape: {X_features.shape}")  # Debugging
+
     # ✅ PCA Transformation (Ensure Correct Processing Order)
     X_features_pca = pca.transform(X_features)
+    st.write(f"✅ PCA Transformed Features Shape: {X_features_pca.shape}")  # Debugging
 
     # ✅ Ensure Feature Shape Matches Stacking Model
     expected_features = stacking_model.estimators_[0][1].n_features_in_
@@ -61,8 +64,19 @@ if uploaded_file:
     stacking_pred = stacking_pred_proba.argmax(axis=1).reshape(-1, 1)
     nafld_label = "Healthy" if stacking_pred[0] == 0 else "Fatty Liver (NAFLD) Detected"
 
-    # ✅ Predict Fat Percentage Using XGBoost with Correct Features
-    fats_pred = xgb_model.predict(X_features_pca)[0]  # Use PCA-transformed features
+    # ✅ Debugging stacking model output
+    st.write(f"✅ Stacking Model Prediction: {stacking_pred[0]}")
+    st.write(f"✅ Stacking Model Probabilities: {stacking_pred_proba}")
+
+    # ✅ Predict Fat Percentage Using XGBoost
+    # Ensure XGBoost gets the correct input feature shape
+    xgb_input = stacking_pred_proba[:, 1].reshape(-1, 1)  # Use probability of NAFLD (only 1 feature)
+    st.write(f"✅ XGBoost Input Shape: {xgb_input.shape}")  # Debugging
+
+    fats_pred = xgb_model.predict(xgb_input)[0]  # Predict Fat Percentage
+
+    # ✅ Debugging final fat prediction
+    st.write(f"✅ Estimated Fat Percentage: {fats_pred:.2f}%")
 
     # ✅ Display Results
     st.subheader("🩺 Prediction Results")
