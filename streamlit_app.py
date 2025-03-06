@@ -13,7 +13,7 @@ st.set_page_config(page_title="B-Mode Ultrasound NAFLD", layout="wide")
 try:
     stacking_model = joblib.load("models/stacking_model.pkl")  
     pca = joblib.load("models/pca_model.pkl")
-    xgb_model = joblib.load("models/xgb_model.pkl")  
+    lasso = joblib.load("models/lasso_selector.pkl")  # ✅ Use Lasso for fat prediction
 
 except Exception as e:
     st.error(f"Error loading models: {e}")
@@ -67,19 +67,9 @@ if uploaded_file:
     st.write(f"✅ Stacking Model Prediction: {stacking_pred}")  # Debugging
     st.write(f"✅ Stacking Model Probabilities: {stacking_pred_proba}")  # Debugging
 
-    # ✅ Fix XGBoost Input - Use Only the NAFLD Probability
-    xgb_input = stacking_pred_proba[:, 1].reshape(-1, 1)  # Extract only class probability for NAFLD
-    st.write(f"✅ XGBoost Expected Input Features: {xgb_model.n_features_in_}")  # Debugging
-    st.write(f"✅ XGBoost Input Shape: {xgb_input.shape}")  # Debugging
-
-    if xgb_input.shape[1] != xgb_model.n_features_in_:
-        st.error(f"❌ Feature shape mismatch for XGBoost! Expected {xgb_model.n_features_in_}, got {xgb_input.shape[1]}")
-        st.stop()
-
-    # ✅ Predict Fat Percentage Using XGBoost with Correct Features
-    fats_pred = xgb_model.predict(xgb_input)[0]  
-
-    st.write(f"✅ XGBoost Prediction Raw Output: {fats_pred}")  # Debugging
+    # ✅ Use Lasso Regression to Predict Fat Percentage (Fixes Always 0 Issue)
+    fats_pred = lasso.predict(X_features_pca)[0]  
+    st.write(f"✅ Lasso Predicted Fat Percentage: {fats_pred:.2f}%")  # Debugging
 
     # ✅ Display Results
     st.subheader("🩺 Prediction Results")
